@@ -1,10 +1,10 @@
 import os
+
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import convolve2d
-from scipy.ndimage import map_coordinates
 
-from utils import *
+from utils import *  # noqa: F403
+
 
 def harris_corner_detector(im):
     """
@@ -13,6 +13,7 @@ def harris_corner_detector(im):
     :return: An array with shape (N,2), where its ith entry is the [x,y] coordinates of the ith corner point.
     """
     pass
+
 
 def feature_descriptor(im, points, desc_rad=3):
     """
@@ -24,6 +25,7 @@ def feature_descriptor(im, points, desc_rad=3):
     """
     pass
 
+
 def find_features(im):
     """
     Detects and extracts feature points from a specific pyramid level.
@@ -34,6 +36,7 @@ def find_features(im):
             2) A feature descriptor array with shape (N,K,K)
     """
     pass
+
 
 def match_features(desc1, desc2, min_score):
     """
@@ -47,6 +50,7 @@ def match_features(desc1, desc2, min_score):
     """
     pass
 
+
 def apply_homography(pos1, H12):
     """
     Apply homography to inhomogenous points.
@@ -55,6 +59,7 @@ def apply_homography(pos1, H12):
     :return: An array with the same shape as pos1 with [x,y] point coordinates obtained from transforming pos1 using H12.
     """
     pass
+
 
 def ransac_homography(points1, points2, num_iter, inlier_tol, translation_only=False):
     """
@@ -70,6 +75,7 @@ def ransac_homography(points1, points2, num_iter, inlier_tol, translation_only=F
                     containing the indices in pos1/pos2 of the maximal set of inlier matches found.
     """
     pass
+
 
 def display_matches(im1, im2, points1, points2, inliers):
     """
@@ -108,6 +114,7 @@ def compute_bounding_box(homography, w, h):
     """
     pass
 
+
 def warp_channel(image, homography):
     """
     Warps a 2D image with a given homography.
@@ -117,6 +124,7 @@ def warp_channel(image, homography):
     """
     pass
 
+
 def warp_image(image, homography):
     """
     Warps an RGB image with a given homography.
@@ -125,7 +133,6 @@ def warp_image(image, homography):
     :return: A warped image.
     """
     pass
-
 
 
 ##################################################################################################
@@ -145,11 +152,14 @@ def align_images(files, translation_only=False):
     # Compute homographies between successive pairs of images.
     Hs = []
     for i in range(len(points_and_descriptors) - 1):
-        points1, points2 = points_and_descriptors[i][0], points_and_descriptors[i + 1][0]
+        points1, points2 = (
+            points_and_descriptors[i][0],
+            points_and_descriptors[i + 1][0],
+        )
         desc1, desc2 = points_and_descriptors[i][1], points_and_descriptors[i + 1][1]
 
         # Find matching feature points.
-        ind1, ind2 = match_features(desc1, desc2, .7)
+        ind1, ind2 = match_features(desc1, desc2, 0.7)
         points1, points2 = points1[ind1, :], points2[ind2, :]
 
         # Compute homography using RANSAC.
@@ -160,11 +170,21 @@ def align_images(files, translation_only=False):
     # Compute composite homographies from the central coordinate system.
     accumulated_homographies = accumulate_homographies(Hs, (len(Hs) - 1) // 2)
     homographies = np.stack(accumulated_homographies)
-    frames_for_panoramas = filter_homographies_with_translation(homographies, minimum_right_translation=5)
+    frames_for_panoramas = filter_homographies_with_translation(
+        homographies, minimum_right_translation=5
+    )
     homographies = homographies[frames_for_panoramas]
     return frames_for_panoramas, homographies
 
-def generate_panoramic_images(data_dir, file_prefix, num_images, out_dir, number_of_panoramas, translation_only=False):
+
+def generate_panoramic_images(
+    data_dir,
+    file_prefix,
+    num_images,
+    out_dir,
+    number_of_panoramas,
+    translation_only=False,
+):
     """
     combine slices from input images to panoramas.
     The naming convention for a sequence of images is file_prefixN.jpg, where N is a running number 001, 002, 003...
@@ -176,9 +196,12 @@ def generate_panoramic_images(data_dir, file_prefix, num_images, out_dir, number
     """
 
     file_prefix = file_prefix
-    files = [os.path.join(data_dir, '%s%03d.jpg' % (file_prefix, i + 1)) for i in range(num_images)]
+    files = [
+        os.path.join(data_dir, "%s%03d.jpg" % (file_prefix, i + 1))
+        for i in range(num_images)
+    ]
     files = list(filter(os.path.exists, files))
-    print('found %d images' % len(files))
+    print("found %d images" % len(files))
     image = read_image(files[0], 1)
     h, w = image.shape
 
@@ -194,7 +217,9 @@ def generate_panoramic_images(data_dir, file_prefix, num_images, out_dir, number
     global_offset = np.min(bounding_boxes, axis=(0, 1))
     bounding_boxes -= global_offset
 
-    slice_centers = np.linspace(0, w, number_of_panoramas + 2, endpoint=True, dtype=np.int32)[1:-1]
+    slice_centers = np.linspace(
+        0, w, number_of_panoramas + 2, endpoint=True, dtype=np.int32
+    )[1:-1]
     warped_slice_centers = np.zeros((number_of_panoramas, frames_for_panoramas.size))
     # every slice is a different panorama, it indicates the slices of the input images from which the panorama
     # will be concatenated
@@ -203,18 +228,26 @@ def generate_panoramic_images(data_dir, file_prefix, num_images, out_dir, number
         # homography warps the slice center to the coordinate system of the middle image
         warped_centers = [apply_homography(slice_center_2d, h) for h in homographies]
         # we are actually only interested in the x coordinate of each slice center in the panoramas' coordinate system
-        warped_slice_centers[i] = np.array(warped_centers)[:, :, 0].squeeze() - global_offset[0]
+        warped_slice_centers[i] = (
+            np.array(warped_centers)[:, :, 0].squeeze() - global_offset[0]
+        )
 
     panorama_size = np.max(bounding_boxes, axis=(0, 1)).astype(np.int32) + 1
 
     # boundary between input images in the panorama
-    x_strip_boundary = ((warped_slice_centers[:, :-1] + warped_slice_centers[:, 1:]) / 2)
-    x_strip_boundary = np.hstack([np.zeros((number_of_panoramas, 1)),
-                                  x_strip_boundary,
-                                  np.ones((number_of_panoramas, 1)) * panorama_size[0]])
+    x_strip_boundary = (warped_slice_centers[:, :-1] + warped_slice_centers[:, 1:]) / 2
+    x_strip_boundary = np.hstack(
+        [
+            np.zeros((number_of_panoramas, 1)),
+            x_strip_boundary,
+            np.ones((number_of_panoramas, 1)) * panorama_size[0],
+        ]
+    )
     x_strip_boundary = x_strip_boundary.round().astype(np.int32)
 
-    panoramas = np.zeros((number_of_panoramas, panorama_size[1], panorama_size[0], 3), dtype=np.float64)
+    panoramas = np.zeros(
+        (number_of_panoramas, panorama_size[1], panorama_size[0], 3), dtype=np.float64
+    )
     for i, frame_index in enumerate(frames_for_panoramas):
         # warp every input image once, and populate all panoramas
         image = read_image(files[frame_index], 2)
@@ -224,22 +257,29 @@ def generate_panoramic_images(data_dir, file_prefix, num_images, out_dir, number
 
         for panorama_index in range(number_of_panoramas):
             # take strip of warped image and paste to current panorama
-            boundaries = x_strip_boundary[panorama_index, i:i + 2]
-            image_strip = warped_image[:, boundaries[0] - x_offset: boundaries[1] - x_offset]
+            boundaries = x_strip_boundary[panorama_index, i : i + 2]
+            image_strip = warped_image[
+                :, boundaries[0] - x_offset : boundaries[1] - x_offset
+            ]
             x_end = boundaries[0] + image_strip.shape[1]
-            panoramas[panorama_index, y_offset:y_bottom, boundaries[0]:x_end] = image_strip
+            panoramas[panorama_index, y_offset:y_bottom, boundaries[0] : x_end] = (
+                image_strip
+            )
 
     os.makedirs(out_dir, exist_ok=True)
     for i, panorama in enumerate(panoramas):
-        plt.imsave('%s/panorama%02d.png' % (out_dir, i + 1), panorama)
+        plt.imsave("%s/panorama%02d.png" % (out_dir, i + 1), panorama)
 
 
 if __name__ == "__main__":
     import ffmpeg
+
     video_name = "mt_cook.mp4"
-    video_name_base = video_name.split('.')[0]
+    video_name_base = video_name.split(".")[0]
     os.makedirs(f"dump/{video_name_base}", exist_ok=True)
-    ffmpeg.input(f"videos/{video_name}").output(f"dump/{video_name_base}/{video_name_base}%03d.jpg").run()
+    ffmpeg.input(f"videos/{video_name}").output(
+        f"dump/{video_name_base}/{video_name_base}%03d.jpg"
+    ).run()
     num_images = len(os.listdir(f"dump/{video_name_base}"))
     print(f"Generated {num_images} images")
 
@@ -268,7 +308,9 @@ if __name__ == "__main__":
     print(f"Found {len(ind1)} matches")
 
     # Run RANSAC to find inliers
-    H12, inliers = ransac_homography(matched_points1, matched_points2, 100, 6, translation_only=False)
+    H12, inliers = ransac_homography(
+        matched_points1, matched_points2, 100, 6, translation_only=False
+    )
     print(f"Found {len(inliers)} inliers out of {len(matched_points1)} matches")
 
     # Display matches with inliers and outliers
@@ -276,5 +318,10 @@ if __name__ == "__main__":
 
     # Generate panoramic images
     print("\nGenerating panoramic images...")
-    generate_panoramic_images(f"dump/{video_name_base}/", video_name_base,
-                              num_images=num_images, out_dir=f"out/{video_name_base}", number_of_panoramas=3)
+    generate_panoramic_images(
+        f"dump/{video_name_base}/",
+        video_name_base,
+        num_images=num_images,
+        out_dir=f"out/{video_name_base}",
+        number_of_panoramas=3,
+    )

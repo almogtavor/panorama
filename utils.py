@@ -1,11 +1,10 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-from scipy.ndimage.morphology import generate_binary_structure
+from scipy.ndimage import center_of_mass, gaussian_filter, label, map_coordinates, sobel
 from scipy.ndimage.filters import maximum_filter
-from scipy.ndimage import label, center_of_mass, map_coordinates, sobel, gaussian_filter
-from scipy.ndimage.filters import convolve
+from scipy.ndimage.morphology import generate_binary_structure
 from skimage.color import rgb2gray
-import matplotlib.pyplot as plt
 
 GRAYSCALE_MAX = 255
 GRAY_REPRESENTATION = 1
@@ -53,7 +52,7 @@ def reduce(img, filter_size):
     :return: The reduced image
     """
     sigma = (filter_size - 1) / 4
-    blurred_image = gaussian_filter(img, sigma=sigma, mode='mirror')
+    blurred_image = gaussian_filter(img, sigma=sigma, mode="mirror")
     reduced_img = blurred_image[::2, ::2]
     return reduced_img
 
@@ -69,7 +68,7 @@ def blur_spatial(im, kernel_size):
         return im
 
     sigma = (kernel_size - 1) / 4
-    blurred_image = gaussian_filter(im, sigma=sigma, mode='mirror')
+    blurred_image = gaussian_filter(im, sigma=sigma, mode="mirror")
     return blurred_image
 
 
@@ -93,6 +92,7 @@ def non_maximum_suppression(image):
 
     return ret
 
+
 def spread_out_corners(im, m, n, radius, harris_corner_detector):
     """
     Splits the image im to m by n rectangles and uses harris_corner_detector on each.
@@ -109,15 +109,20 @@ def spread_out_corners(im, m, n, radius, harris_corner_detector):
     for i in range(n):
         for j in range(m):
             # Use Harris detector on every sub image.
-            sub_im = im[y_bound[j]:y_bound[j + 1], x_bound[i]:x_bound[i + 1]]
+            sub_im = im[y_bound[j] : y_bound[j + 1], x_bound[i] : x_bound[i + 1]]
             sub_corners = harris_corner_detector(sub_im)
             sub_corners += np.array([x_bound[i], y_bound[j]])[np.newaxis, :]
             corners.append(sub_corners)
     corners = np.vstack(corners)
-    legit = ((corners[:, 0] > radius) & (corners[:, 0] < im.shape[1] - radius) &
-             (corners[:, 1] > radius) & (corners[:, 1] < im.shape[0] - radius))
+    legit = (
+        (corners[:, 0] > radius)
+        & (corners[:, 0] < im.shape[1] - radius)
+        & (corners[:, 1] > radius)
+        & (corners[:, 1] < im.shape[0] - radius)
+    )
     ret = corners[legit, :]
     return ret
+
 
 def visualize_points(im, points):
     """
@@ -125,9 +130,10 @@ def visualize_points(im, points):
     :param im: A 2D array representing an image.
     :param points: An array of points with shape (N,2) to be drawn on the image.
     """
-    plt.imshow(im, cmap='gray')
-    plt.scatter(points[:, 0], points[:, 1], marker='.', c='r')
+    plt.imshow(im, cmap="gray")
+    plt.scatter(points[:, 0], points[:, 1], marker=".", c="r")
     plt.show()
+
 
 def dominant_orientation(im, x, y, rad=8):
     """
@@ -153,6 +159,7 @@ def dominant_orientation(im, x, y, rad=8):
 
     angles = np.arctan2(gy, gx)
     return np.arctan2(np.mean(np.sin(angles)), np.mean(np.cos(angles)))
+
 
 def estimate_rigid_transform(points1, points2, translation_only=False):
     """
@@ -184,6 +191,7 @@ def estimate_rigid_transform(points1, points2, translation_only=False):
     H[:2, :2] = rotation
     H[:2, 2] = translation
     return H
+
 
 def filter_homographies_with_translation(homographies, minimum_right_translation):
     """
