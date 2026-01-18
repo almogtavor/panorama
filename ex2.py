@@ -2,6 +2,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.signal import convolve2d
 
 from utils import *  # noqa: F403
 
@@ -12,7 +13,22 @@ def harris_corner_detector(im):
     :param im: A 2D array representing a grayscale image.
     :return: An array with shape (N,2), where its ith entry is the [x,y] coordinates of the ith corner point.
     """
-    pass
+    ix_filter = np.array([[1, 0, -1]])
+    iy_filter = ix_filter.T
+
+    ix = convolve2d(im, ix_filter, mode="same", boundary="symm")
+    iy = convolve2d(im, iy_filter, mode="same", boundary="symm")
+
+    ix2 = blur_spatial(ix * ix, 3)
+    iy2 = blur_spatial(iy * iy, 3)
+    ixy = blur_spatial(ix * iy, 3)
+
+    alpha = 0.04
+    response = (ix2 * iy2 - ixy * ixy) - alpha * (ix2 + iy2) ** 2
+
+    corners = non_maximum_suppression(response)
+    ys, xs = np.nonzero(corners)
+    return np.stack([xs, ys], axis=1)
 
 
 def feature_descriptor(im, points, desc_rad=3):
