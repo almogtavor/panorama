@@ -9,7 +9,7 @@ from scipy.ndimage import map_coordinates
 from utils import *  # noqa: F403
 
 
-MIN_SCORE = 0.85
+MIN_SCORE = 0.7
 
 
 def harris_corner_detector(im):
@@ -333,7 +333,8 @@ def align_images(files, translation_only=False):
         points1, points2 = points1[ind1, :], points2[ind2, :]
 
         # Compute homography using RANSAC.
-        print(f"RANSAC call {i + 1}/{len(points_and_descriptors) - 1}")
+        if (i + 1) % 100 == 0:
+            print(f"RANSAC call {i + 1}/{len(points_and_descriptors) - 1}")
         H12, inliers = ransac_homography(points1, points2, 100, 6, translation_only)
 
         Hs.append(H12)
@@ -453,9 +454,10 @@ def generate_panoramic_images(
 
 
 if __name__ == "__main__":
+    import sys
     import ffmpeg
 
-    video_name = "mt_cook.mp4"
+    video_name = sys.argv[1] if len(sys.argv) > 1 else "mt_cook.mp4"
     video_name_base = video_name.split(".")[0]
     os.makedirs(f"dump/{video_name_base}", exist_ok=True)
     ffmpeg.input(f"videos/{video_name}").output(
@@ -504,5 +506,5 @@ if __name__ == "__main__":
         video_name_base,
         num_images=num_images,
         out_dir=f"out/{video_name_base}",
-        number_of_panoramas=3,
+        number_of_panoramas=2,
     )
